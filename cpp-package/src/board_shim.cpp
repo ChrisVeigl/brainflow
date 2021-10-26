@@ -50,7 +50,7 @@ void BoardShim::enable_dev_board_logger ()
 
 void BoardShim::set_log_file (std::string log_file)
 {
-    int res = ::set_log_file (const_cast<char *> (log_file.c_str ()));
+    int res = set_log_file_board_controller (log_file.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to set log file", res);
@@ -59,7 +59,7 @@ void BoardShim::set_log_file (std::string log_file)
 
 void BoardShim::set_log_level (int log_level)
 {
-    int res = ::set_log_level (log_level);
+    int res = set_log_level_board_controller (log_level);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to set log level", res);
@@ -74,7 +74,7 @@ void BoardShim::log_message (int log_level, const char *format, ...)
     vsnprintf (buffer, 1024, format, ap);
     va_end (ap);
 
-    int res = ::log_message (log_level, buffer);
+    int res = log_message_board_controller (log_level, buffer);
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to write log message", res);
@@ -94,7 +94,7 @@ BoardShim::BoardShim (int board_id, struct BrainFlowInputParams params)
 
 void BoardShim::prepare_session ()
 {
-    int res = ::prepare_session (board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res = ::prepare_session (board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to prepare session", res);
@@ -104,7 +104,7 @@ void BoardShim::prepare_session ()
 bool BoardShim::is_prepared ()
 {
     int prepared = 0;
-    int res = ::is_prepared (&prepared, board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res = ::is_prepared (&prepared, board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to check session", res);
@@ -114,8 +114,8 @@ bool BoardShim::is_prepared ()
 
 void BoardShim::start_stream (int buffer_size, std::string streamer_params)
 {
-    int res = ::start_stream (buffer_size, const_cast<char *> (streamer_params.c_str ()), board_id,
-        const_cast<char *> (serialized_params.c_str ()));
+    int res = ::start_stream (
+        buffer_size, streamer_params.c_str (), board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to start stream", res);
@@ -124,7 +124,7 @@ void BoardShim::start_stream (int buffer_size, std::string streamer_params)
 
 void BoardShim::stop_stream ()
 {
-    int res = ::stop_stream (board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res = ::stop_stream (board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to stop stream", res);
@@ -133,7 +133,7 @@ void BoardShim::stop_stream ()
 
 void BoardShim::release_session ()
 {
-    int res = ::release_session (board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res = ::release_session (board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to release session", res);
@@ -143,8 +143,7 @@ void BoardShim::release_session ()
 int BoardShim::get_board_data_count ()
 {
     int data_count = 0;
-    int res = ::get_board_data_count (
-        &data_count, board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res = ::get_board_data_count (&data_count, board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to get board data count", res);
@@ -154,11 +153,20 @@ int BoardShim::get_board_data_count ()
 
 BrainFlowArray<double, 2> BoardShim::get_board_data ()
 {
-    int num_samples = get_board_data_count ();
+    return get_board_data (get_board_data_count ());
+}
+
+BrainFlowArray<double, 2> BoardShim::get_board_data (int num_datapoints)
+{
+    if (num_datapoints < 0)
+    {
+        throw BrainFlowException (
+            "invalid num_datapoints", (int)BrainFlowExitCodes::INVALID_ARGUMENTS_ERROR);
+    }
+    int num_samples = std::min (get_board_data_count (), num_datapoints);
     int num_data_channels = get_num_rows (get_board_id ());
     double *buf = new double[num_samples * num_data_channels];
-    int res = ::get_board_data (
-        num_samples, buf, board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res = ::get_board_data (num_samples, buf, board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         delete[] buf;
@@ -174,8 +182,8 @@ BrainFlowArray<double, 2> BoardShim::get_current_board_data (int num_samples)
     int num_data_channels = BoardShim::get_num_rows (get_board_id ());
     double *buf = new double[num_samples * num_data_channels];
     int len = 0;
-    int res = ::get_current_board_data (
-        num_samples, buf, &len, board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res =
+        ::get_current_board_data (num_samples, buf, &len, board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         delete[] buf;
@@ -190,8 +198,8 @@ std::string BoardShim::config_board (char *config)
 {
     int response_len = 0;
     char response[8192];
-    int res = ::config_board (
-        config, response, &response_len, board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res =
+        ::config_board (config, response, &response_len, board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to config board", res);
@@ -202,7 +210,7 @@ std::string BoardShim::config_board (char *config)
 
 void BoardShim::insert_marker (double value)
 {
-    int res = ::insert_marker (value, board_id, const_cast<char *> (serialized_params.c_str ()));
+    int res = ::insert_marker (value, board_id, serialized_params.c_str ());
     if (res != (int)BrainFlowExitCodes::STATUS_OK)
     {
         throw BrainFlowException ("failed to insert marker", res);

@@ -18,7 +18,6 @@ export BrainFlowInputParams
     CALLIBRI_EEG_BOARD = 9
     CALLIBRI_EMG_BOARD = 10
     CALLIBRI_ECG_BOARD = 11
-    FASCIA_BOARD = 12
     NOTION_1_BOARD = 13
     NOTION_2_BOARD = 14
     IRONBCI_BOARD = 15
@@ -227,6 +226,21 @@ end
             config, resp_string, len, board_shim.board_id, board_shim.input_json)
     sub_string = String(resp_string)[1:len[1]]
     return sub_string
+end
+
+@brainflow_rethrow function get_board_data(num_samples::Integer, board_shim::BoardShim)
+    data_size = get_board_data_count(board_shim)
+    if num_samples < 0
+        throw(BrainFlowError("Invalid num_samples", Integer(INVALID_ARGUMENTS_ERROR)))
+    else
+        data_size = (data_size >= num_samples) ? num_samples : data_size
+    end
+    num_rows = get_num_rows(board_shim.master_board_id)
+    val = Vector{Float64}(undef, num_rows * data_size)
+    ccall((:get_board_data, BOARD_CONTROLLER_INTERFACE), Cint, (Cint, Ptr{Float64}, Cint, Ptr{UInt8}), 
+            data_size, val, board_shim.board_id, board_shim.input_json)
+    value = transpose(reshape(val, (data_size, num_rows)))
+    return value
 end
 
 @brainflow_rethrow function get_board_data(board_shim::BoardShim)

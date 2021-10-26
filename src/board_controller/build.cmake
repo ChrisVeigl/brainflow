@@ -50,6 +50,7 @@ SET (BOARD_CONTROLLER_SRC
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/streaming_board.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/synthetic_board.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/dyn_lib_board.cpp
+    ${CMAKE_HOME_DIRECTORY}/src/board_controller/bt_lib_board.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/playback_file_board.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/openbci/galea.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/file_streamer.cpp
@@ -61,7 +62,6 @@ SET (BOARD_CONTROLLER_SRC
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/neuromd/callibri_eeg.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/neuromd/callibri_ecg.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/neuromd/callibri_emg.cpp
-    ${CMAKE_HOME_DIRECTORY}/src/board_controller/mit/fascia.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/neurosity/notion_osc.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/oymotion/gforce_pro.cpp
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/oymotion/gforce_dual.cpp
@@ -111,7 +111,6 @@ target_include_directories (
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/neuromd/brainbit_bglib/inc
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/muse/inc
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/muse/muse_bglib/inc
-    ${CMAKE_HOME_DIRECTORY}/src/board_controller/mit/inc
     ${CMAKE_HOME_DIRECTORY}/third_party/neurosdk/inc/types
     ${CMAKE_HOME_DIRECTORY}/src/board_controller/neurosity/inc
     ${CMAKE_HOME_DIRECTORY}/third_party/gForceSDKCXX/src/inc
@@ -148,6 +147,13 @@ if (USE_LIBFTDI)
     endif (LibFTDI1_FOUND)
 endif (USE_LIBFTDI)
 
+if (USE_PERIPHERY)
+    include (${CMAKE_HOME_DIRECTORY}/third_party/c-periphery/build.cmake)
+    target_link_libraries (${BOARD_CONTROLLER_NAME} PRIVATE ${PERIPHERY})
+    target_include_directories (${BOARD_CONTROLLER_NAME} PRIVATE ${CMAKE_HOME_DIRECTORY}/third_party/c-periphery/src)
+    target_compile_definitions (${BOARD_CONTROLLER_NAME} PRIVATE USE_PERIPHERY)
+endif (USE_PERIPHERY)
+
 if (MSVC)
     add_custom_command (TARGET ${BOARD_CONTROLLER_NAME} POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/compiled/$<CONFIG>/${BOARD_CONTROLLER_COMPILED_NAME}" "${CMAKE_HOME_DIRECTORY}/python-package/brainflow/lib/${BOARD_CONTROLLER_COMPILED_NAME}"
@@ -158,6 +164,10 @@ if (MSVC)
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/board_controller/inc/board_controller.h" "${CMAKE_HOME_DIRECTORY}/matlab-package/brainflow/inc/board_controller.h"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/board_controller/inc/board_info_getter.h" "${CMAKE_HOME_DIRECTORY}/matlab-package/brainflow/inc/board_info_getter.h"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/utils/inc/shared_export_matlab.h" "${CMAKE_HOME_DIRECTORY}/matlab-package/brainflow/inc/shared_export.h"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/compiled/$<CONFIG>/${BOARD_CONTROLLER_COMPILED_NAME}" "${CMAKE_HOME_DIRECTORY}/rust-package/brainflow/lib/${BOARD_CONTROLLER_COMPILED_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/board_controller/inc/board_controller.h" "${CMAKE_HOME_DIRECTORY}/rust-package/brainflow/inc/board_controller.h"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/board_controller/inc/board_info_getter.h" "${CMAKE_HOME_DIRECTORY}/rust-package/brainflow/inc/board_info_getter.h"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/utils/inc/brainflow_constants.h" "${CMAKE_HOME_DIRECTORY}/rust-package/brainflow/inc/brainflow_constants.h"
     )
 endif (MSVC)
 if (UNIX AND NOT ANDROID)
@@ -171,6 +181,10 @@ if (UNIX AND NOT ANDROID)
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/utils/inc/shared_export_matlab.h" "${CMAKE_HOME_DIRECTORY}/matlab-package/brainflow/inc/shared_export.h"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/utils/inc/brainflow_constants.h" "${CMAKE_HOME_DIRECTORY}/matlab-package/brainflow/inc/brainflow_constants.h"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/compiled/${BOARD_CONTROLLER_COMPILED_NAME}" "${CMAKE_HOME_DIRECTORY}/matlab-package/brainflow/lib/${BOARD_CONTROLLER_COMPILED_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/compiled/${BOARD_CONTROLLER_COMPILED_NAME}" "${CMAKE_HOME_DIRECTORY}/rust-package/brainflow/lib/${BOARD_CONTROLLER_COMPILED_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/board_controller/inc/board_controller.h" "${CMAKE_HOME_DIRECTORY}/rust-package/brainflow/inc/board_controller.h"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/board_controller/inc/board_info_getter.h" "${CMAKE_HOME_DIRECTORY}/rust-package/brainflow/inc/board_info_getter.h"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_HOME_DIRECTORY}/src/utils/inc/brainflow_constants.h" "${CMAKE_HOME_DIRECTORY}/rust-package/brainflow/inc/brainflow_constants.h"
     )
 endif (UNIX AND NOT ANDROID)
 

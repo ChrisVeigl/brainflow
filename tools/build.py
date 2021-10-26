@@ -1,6 +1,7 @@
 import argparse
 import platform
 import subprocess
+import multiprocessing
 import os
 from shutil import rmtree
 
@@ -32,8 +33,16 @@ class Generator:
         raise NotImplementedError
 
     def __lt__(self, other):
-         return self.priority < other.priority
+        return self.priority < other.priority
 
+    def __gt__(self, other):
+        return self.priority > other.priority
+
+    def __le__(self, other):
+        return self.priority <= other.priority
+
+    def __ge__(self, other):
+        return self.priority >= other.priority
 
 class VS2019(Generator):
 
@@ -69,13 +78,13 @@ def get_win_generators():
             result.append(VS2019())
         if '2017' in output:
             result.append(VS2017())
-    except BaseException as e:
+    except BaseException:
         print('No Visual Studio Installations Found')
     return sorted(result, reverse=True)
 
 def check_deps():
     try:
-        cmake = subprocess.check_output(['cmake', '--version'])
+        subprocess.check_output(['cmake', '--version'])
     except BaseException as e:
         print('You need to install CMake first. Run: python -m pip install cmake')
         raise e
@@ -89,7 +98,7 @@ def prepare_args():
         bluetooth_default = True
         parser.add_argument('--oymotion', dest='oymotion', action='store_true')
         parser.add_argument('--no-oymotion', dest='oymotion', action='store_false')
-        parser.set_defaults(oymotion=True)
+        parser.set_defaults(oymotion=False)
         parser.add_argument('--msvc-runtime', type=str, choices=['static', 'dynamic'], help='how to link MSVC runtime', required=False, default='static')
         generators = get_win_generators()
         if not generators:
@@ -122,6 +131,7 @@ def prepare_args():
     else:
         parser.add_argument('--generator', type=str, help='CMake generator', required=False)
         parser.add_argument('--use-libftdi', action='store_true')
+        parser.add_argument('--use-periphery', action='store_true')
 
     parser.add_argument('--build-dir', type=str, help='build folder', required=False, default=os.path.join(cur_folder, '..', 'build'))
     parser.add_argument('--cmake-install-prefix', type=str, help='installation folder, full path', required=False, default=os.path.join(cur_folder, '..', 'installed'))
@@ -130,7 +140,7 @@ def prepare_args():
     parser.add_argument('--warnings-as-errors', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--clear-build-dir', action='store_true')
-    parser.add_argument('--num-jobs', type=int, help='num jobs to run in parallel', required=False, default=4)
+    parser.add_argument('--num-jobs', type=int, help='num jobs to run in parallel', required=False, default=max(1, multiprocessing.cpu_count() // 2))
     parser.add_argument('--bluetooth', dest='bluetooth', action='store_true')
     parser.add_argument('--no-bluetooth', dest='bluetooth', action='store_false')
     parser.set_defaults(bluetooth=bluetooth_default)
@@ -155,6 +165,8 @@ def config(args):
         cmd_config.append('-DCMAKE_SYSTEM_VERSION=%s' % args.cmake_system_version)
     if hasattr(args, 'use_libftdi') and args.use_libftdi:
         cmd_config.append('-DUSE_LIBFTDI=ON')
+    if hasattr(args, 'use_periphery') and args.use_periphery:
+        cmd_config.append('-DUSE_PERIPHERY=ON')
     if args.warnings_as_errors:
         cmd_config.append('-DWARNINGS_AS_ERRORS=ON')
     if args.use_openmp:

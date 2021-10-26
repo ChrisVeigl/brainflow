@@ -5,12 +5,10 @@ import pkg_resources
 import enum
 import os
 import platform
-import sys
 import struct
 import json
-from typing import List, Set, Dict, Tuple
 
-from nptyping import NDArray, Float64
+from nptyping import NDArray
 
 from brainflow.board_shim import BrainFlowError, LogLevels
 from brainflow.exit_codes import BrainflowExitCodes
@@ -90,15 +88,15 @@ class MLModuleDLL(object):
             raise FileNotFoundError(
                 'Dynamic library %s is missed, did you forget to compile brainflow before installation of python package?' % full_path)
 
-        self.set_log_level = self.lib.set_log_level
-        self.set_log_level.restype = ctypes.c_int
-        self.set_log_level.argtypes = [
+        self.set_log_level_ml_module = self.lib.set_log_level_ml_module
+        self.set_log_level_ml_module.restype = ctypes.c_int
+        self.set_log_level_ml_module.argtypes = [
             ctypes.c_int
         ]
 
-        self.set_log_file = self.lib.set_log_file
-        self.set_log_file.restype = ctypes.c_int
-        self.set_log_file.argtypes = [
+        self.set_log_file_ml_module = self.lib.set_log_file_ml_module
+        self.set_log_file_ml_module.restype = ctypes.c_int
+        self.set_log_file_ml_module.argtypes = [
             ctypes.c_char_p
         ]
 
@@ -135,7 +133,7 @@ class MLModel(object):
         self.model_params = model_params
         try:
             self.serialized_params = model_params.to_json().encode()
-        except:
+        except BaseException:
             self.serialized_params = model_params.to_json()
 
     @classmethod
@@ -146,7 +144,7 @@ class MLModel(object):
         :param log_level: log level, to specify it you should use values from LogLevels enum
         :type log_level: int
         """
-        res = MLModuleDLL.get_instance().set_log_level(log_level)
+        res = MLModuleDLL.get_instance().set_log_level_ml_module(log_level)
         if res != BrainflowExitCodes.STATUS_OK.value:
             raise BrainFlowError('unable to enable logger', res)
 
@@ -174,9 +172,9 @@ class MLModel(object):
         """
         try:
             file = log_file.encode()
-        except:
+        except BaseException:
             file = log_file
-        res = MLModuleDLL.get_instance().set_log_file(file)
+        res = MLModuleDLL.get_instance().set_log_file_ml_module(file)
         if res != BrainflowExitCodes.STATUS_OK.value:
             raise BrainFlowError('unable to redirect logs to a file', res)
 

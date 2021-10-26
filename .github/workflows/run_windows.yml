@@ -39,7 +39,7 @@ jobs:
       run: |
         mkdir %GITHUB_WORKSPACE%\build64
         cd %GITHUB_WORKSPACE%\build64
-        cmake -DBUILD_OYMOTION_SDK=ON -DWARNINGS_AS_ERRORS=ON -G "Visual Studio 16 2019" -A x64 -DCMAKE_SYSTEM_VERSION=8.1 -DCMAKE_INSTALL_PREFIX=..\installed64\ ..
+        cmake -DBUILD_OYMOTION_SDK=ON -DBUILD_BLUETOOTH=ON -DWARNINGS_AS_ERRORS=ON -G "Visual Studio 16 2019" -A x64 -DCMAKE_SYSTEM_VERSION=8.1 -DCMAKE_INSTALL_PREFIX=..\installed64\ ..
         cmake --build . --target install --config Release -j 2 --parallel 2
       shell: cmd
     - name: C# build
@@ -154,12 +154,6 @@ jobs:
       shell: cmd
     - name: Galea Windows C# Test
       run: python %GITHUB_WORKSPACE%\emulator\brainflow_emulator\galea_udp.py %GITHUB_WORKSPACE%\csharp-package\brainflow\tests\brainflow_get_data\bin\Release\test.exe --board-id 3 --ip-address 127.0.0.1
-      shell: cmd
-    #- name: Fascia Python Test
-    #  run: python %GITHUB_WORKSPACE%\emulator\brainflow_emulator\fascia_emulator_ci.py python %GITHUB_WORKSPACE%\tests\python\brainflow_get_data.py --board-id 12 --ip-port 7789
-    #  shell: cmd
-    - name: IronBCI Python Test
-      run: python %GITHUB_WORKSPACE%\emulator\brainflow_emulator\ironbci_windows.py python %GITHUB_WORKSPACE%\tests\python\brainflow_get_data.py --board-id 15 --serial-port
       shell: cmd
     - name: FreeEEG32 Python Test
       run: python %GITHUB_WORKSPACE%\emulator\brainflow_emulator\freeeeg32_windows.py python %GITHUB_WORKSPACE%\tests\python\brainflow_get_data.py --board-id 17 --serial-port

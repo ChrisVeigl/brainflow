@@ -5,12 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.lang3.SystemUtils;
 
@@ -46,11 +42,11 @@ public class BoardShim
 
         int get_board_data (int data_count, double[] data_buf, int board_id, String params);
 
-        int set_log_level (int log_level);
+        int set_log_level_board_controller (int log_level);
 
-        int log_message (int log_level, String message);
+        int log_message_board_controller (int log_level, String message);
 
-        int set_log_file (String log_file);
+        int set_log_file_board_controller (String log_file);
 
         int java_set_jnienv (JNIEnv java_jnienv);
 
@@ -141,7 +137,7 @@ public class BoardShim
             unpack_from_jar (ganglion_name);
         }
 
-        instance = (DllInterface) Native.loadLibrary (lib_name, DllInterface.class,
+        instance = Native.loadLibrary (lib_name, DllInterface.class,
                 Collections.singletonMap (Library.OPTION_ALLOW_OBJECTS, Boolean.TRUE));
         instance.java_set_jnienv (JNIEnv.CURRENT);
     }
@@ -192,7 +188,7 @@ public class BoardShim
      */
     public static void set_log_file (String log_file) throws BrainFlowError
     {
-        int ec = instance.set_log_file (log_file);
+        int ec = instance.set_log_file_board_controller (log_file);
         if (ec != ExitCode.STATUS_OK.get_code ())
         {
             throw new BrainFlowError ("Error in set_log_file", ec);
@@ -204,7 +200,7 @@ public class BoardShim
      */
     public static void set_log_level (int log_level) throws BrainFlowError
     {
-        int ec = instance.set_log_level (log_level);
+        int ec = instance.set_log_level_board_controller (log_level);
         if (ec != ExitCode.STATUS_OK.get_code ())
         {
             throw new BrainFlowError ("Error in set_log_level", ec);
@@ -216,7 +212,7 @@ public class BoardShim
      */
     public static void log_message (int log_level, String message) throws BrainFlowError
     {
-        int ec = instance.log_message (log_level, message);
+        int ec = instance.log_message_board_controller (log_level, message);
         if (ec != ExitCode.STATUS_OK.get_code ())
         {
             throw new BrainFlowError ("Error in log_message", ec);
@@ -341,7 +337,7 @@ public class BoardShim
         }
         String descr_string = new String (str, 0, len[0]);
         Gson gson = new Gson ();
-        T res = (T) gson.fromJson (descr_string, type);
+        T res = gson.fromJson (descr_string, type);
         return res;
     }
 
@@ -779,6 +775,30 @@ public class BoardShim
     public double[][] get_board_data () throws BrainFlowError
     {
         int size = get_board_data_count ();
+        int num_rows = BoardShim.get_num_rows (master_board_id);
+        double[] data_arr = new double[size * num_rows];
+        int ec = instance.get_board_data (size, data_arr, board_id, input_json);
+        if (ec != ExitCode.STATUS_OK.get_code ())
+        {
+            throw new BrainFlowError ("Error in get_board_data", ec);
+        }
+        double[][] result = new double[num_rows][];
+        for (int i = 0; i < num_rows; i++)
+        {
+            result[i] = Arrays.copyOfRange (data_arr, (i * size), (i + 1) * size);
+        }
+        return result;
+    }
+
+    public double[][] get_board_data (int num_datapoints) throws BrainFlowError
+    {
+        if (num_datapoints < 0)
+        {
+            throw new BrainFlowError ("data size should be greater than 0",
+                    ExitCode.INVALID_ARGUMENTS_ERROR.get_code ());
+        }
+        int size = get_board_data_count ();
+        size = (size >= num_datapoints) ? num_datapoints : size;
         int num_rows = BoardShim.get_num_rows (master_board_id);
         double[] data_arr = new double[size * num_rows];
         int ec = instance.get_board_data (size, data_arr, board_id, input_json);

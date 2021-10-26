@@ -30,14 +30,14 @@ classdef BoardShim
         end
         
         function check_ec(ec, task_name)
-            if(ec ~= int32(ExitCodes.STATUS_OK))
+            if (ec ~= int32(ExitCodes.STATUS_OK))
                 error('Non zero ec: %d, for task: %s', ec, task_name)
             end
         end
 
         function set_log_level(log_level)
             % set log level for BoardShim
-            task_name = 'set_log_level';
+            task_name = 'set_log_level_board_controller';
             lib_name = BoardShim.load_lib();
             exit_code = calllib(lib_name, task_name, log_level);
             BoardShim.check_ec(exit_code, task_name);
@@ -45,7 +45,7 @@ classdef BoardShim
 
         function set_log_file(log_file)
             % set log file for BoardShim, logger uses stderr by default
-            task_name = 'set_log_file';
+            task_name = 'set_log_file_board_controller';
             lib_name = BoardShim.load_lib();
             exit_code = calllib(lib_name, task_name, log_file);
             BoardShim.check_ec(exit_code, task_name);
@@ -68,7 +68,7 @@ classdef BoardShim
         
         function log_message(log_level, message)
             % write message to BoardShim logger
-            task_name = 'log_message';
+            task_name = 'log_message_board_controller';
             lib_name = BoardShim.load_lib();
             exit_code = calllib(lib_name, task_name, log_level, message);
             BoardShim.check_ec(exit_code, task_name);
@@ -377,10 +377,17 @@ classdef BoardShim
             num_data_point = data_count.value;
         end
 
-        function data_buf = get_board_data(obj)
-            % get all collected data and remove it from the buffer
+        function data_buf = get_board_data(obj, num_datapoints)
+            % get required amount of data by specifying it and remove it from the buffer
             task_name = 'get_board_data';
             data_count = obj.get_board_data_count();
+            if (num_datapoints < 0)
+                BoardShim.check_ec(int32(ExitCodes.INVALID_ARGUMENTS_ERROR), 'invalid num_datapoints');
+            else
+                if (data_count >= num_datapoints)
+                    data_count = num_datapoints;
+                end
+            end
             num_rows = BoardShim.get_num_rows(obj.master_board_id);
             lib_name = BoardShim.load_lib();
             data = libpointer('doublePtr', zeros(1, data_count * num_rows));
